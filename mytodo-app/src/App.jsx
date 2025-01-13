@@ -5,15 +5,7 @@ import { TodoInput } from "./components/TodoInput"
 import { TodoList } from "./components/TodoList"
 
 
-function App() {
- // const todos = [
- //   {input: 'Hello! Add your first todo', complete: true},
- //   {input: 'Get the groceriest!', complete: false},
- //   {input: 'Learn how to web design', complete: false},
- //   {input: 'Say hi to gran', complete: true },
- // ]
-
-  const [todos, setTodos] = useState([
+function App() {  const [todos, setTodos] = useState([
     { input: 'Hello! Add your first todo!', complete: true }
   ])
 
