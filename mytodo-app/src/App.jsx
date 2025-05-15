@@ -1,69 +1,135 @@
-import { useState, useEffect } from "react"
-import { Header } from "./components/Header"
-import { Tabs } from "./components/Tabs"
-import { TodoInput } from "./components/TodoInput"
-import { TodoList } from "./components/TodoList"
+// App.jsx
+import { useState, useEffect } from "react";
+import { Header } from "./components/Header";
+import { Tabs } from "./components/Tabs";
+import { TodoInput } from "./components/TodoInput";
+import { TodoList } from "./components/TodoList";
 
+function App() {
+  const [todos, setTodos] = useState([]);
+  const [selectedTab, setSelecdtedTab] = useState('Open');
 
-function App() {  const [todos, setTodos] = useState([
-    { input: 'Hello! Add your first todo!', complete: true }
-  ])
+  const [todoInputValue, setTodoInputValue] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentTodoIndex, setCurrentTodoIndex] = useState(null);
 
-  const [selectedTab, setSelecdtedTab] = useState('Open')
+  useEffect(() => {
+    let storedTodos = [];
+    try {
+      const item = localStorage.getItem('todo-app');
+      if (item) {
+        storedTodos = JSON.parse(item).todos || [];
+      }
+    } catch (e) {
+      console.error("Failed to parse todos from localStorage", e);
+      storedTodos = [];
+    }
+    
+    if (storedTodos.length === 0) {
+        setTodos([{ input: 'Hello! Add your first todo!', complete: true, id: Date.now() }]);
+    } else {
+        setTodos(storedTodos.map((todo, index) => ({ ...todo, id: todo.id || Date.now() + index })));
+    }
+  }, []);
 
-  function handleAddTodo(newTodo) {
-    const newTodoList = [...todos, { input: newTodo, complete: false }]
-    setTodos(newTodoList)
-    handleSaveData(newTodoList)
+  function handleSaveData(currentTodos) {
+    localStorage.setItem('todo-app', JSON.stringify({ todos: currentTodos }));
+  }
+
+  function handleAddOrUpdateTodo(text) {
+    const newText = text.trim();
+    if (newText === "") {
+        if (isEditing) { // If editing and input is cleared, effectively cancel edit
+            setIsEditing(false);
+            setCurrentTodoIndex(null);
+            setTodoInputValue("");
+        }
+        return;
+    }
+
+    let newTodoList;
+    if (isEditing && currentTodoIndex !== null) {
+      newTodoList = todos.map((todo, index) =>
+        index === currentTodoIndex ? { ...todo, input: newText } : todo
+      );
+      setIsEditing(false);
+      setCurrentTodoIndex(null);
+    } else {
+      const newTodo = { input: newText, complete: false, id: Date.now() };
+      newTodoList = [...todos, newTodo];
+    }
+    setTodos(newTodoList);
+    handleSaveData(newTodoList);
+    setTodoInputValue("");
   }
 
   function handleCompleteTodo(index) {
-    // update/edit/modify
-    let newTodoList = [...todos]
-    let completedTodo = todos[index]
-    completedTodo['complete'] = true
-    newTodoList[index] = completedTodo
-    setTodos(newTodoList)
-    handleSaveData(newTodoList)
+    let newTodoList = [...todos];
+    if (newTodoList[index]) {
+        newTodoList[index].complete = !newTodoList[index].complete;
+        setTodos(newTodoList);
+        handleSaveData(newTodoList);
+    }
   }
 
-  function handleDeleteTodo(index) {
-    let newTodoList = todos.filter((val, valIndex) => {
-      return valIndex !== index
-    })
-    setTodos(newTodoList)
-    handleSaveData(newTodoList)
+  function handleDeleteTodo(indexToDelete) {
+    let newTodoList = todos.filter((_, index) => index !== indexToDelete);
+    setTodos(newTodoList);
+    handleSaveData(newTodoList);
+    if (isEditing && currentTodoIndex === indexToDelete) {
+      setIsEditing(false);
+      setCurrentTodoIndex(null);
+      setTodoInputValue("");
     }
-    
-    function handleSaveData(curenTodos) {
-      localStorage.setItem('todo-app', JSON.stringify({todos : curenTodos}))
+  }
+  
+  function handleInitiateEdit(indexToEdit, currentText) {
+    setIsEditing(true);
+    setCurrentTodoIndex(indexToEdit);
+    setTodoInputValue(currentText);
+  }
 
+  function handleCancelEdit() {
+    setIsEditing(false);
+    setCurrentTodoIndex(null);
+    setTodoInputValue("");
+  }
+  
+  // The old handleEditData is no longer primary for card edits if using handleInitiateEdit
+  // Keep it if it's used for other purposes, or remove if fully replaced.
+  // For now, we'll assume the card edit uses handleInitiateEdit.
+  /*
+  function handleEditData(index, updateInput) {
+    let newTodoList = [...todos];
+    if (newTodoList[index]) {
+        newTodoList[index].input = updateInput;
+        setTodos(newTodoList);
+        handleSaveData(newTodoList);
     }
-
-    function handleEditData(index, updateInput) {
-      let newTodoList = [...todos];
-      newTodoList[index].input = updateInput;
-      setTodos(newTodoList)
-      handleSaveData(newTodoList)
-    }
-
-  useEffect(() => {
-    if(!localStorage || !localStorage.getItem('todo-app')) 
-      { return }
-     let db = JSON.parse(localStorage.getItem('todo-app'))
-     setTodos(db.todos)
-  }, [])
+  }
+  */
 
   return (
     <>
-      <Header todos={todos}/>
-      <Tabs  selectedTab={selectedTab} setSelecdtedTab={setSelecdtedTab} todos={todos}/>
-      <TodoList handleEditData={handleEditData} handleCompleteTodo = {handleCompleteTodo}
-       handleDeleteTodo={handleDeleteTodo} 
-       selectedTab={selectedTab} todos={todos}/>
-      <TodoInput handleAddTodo= {handleAddTodo} />
+      <Header todos={todos} />
+      <Tabs selectedTab={selectedTab} setSelecdtedTab={setSelecdtedTab} todos={todos} />
+      <TodoList
+        // handleEditData={handleEditData} // Pass this if it's still used for other edit types
+        handleCompleteTodo={handleCompleteTodo}
+        handleDeleteTodo={handleDeleteTodo}
+        handleInitiateEdit={handleInitiateEdit}
+        selectedTab={selectedTab}
+        todos={todos}
+      />
+      <TodoInput
+         onFormSubmit={handleAddOrUpdateTodo}
+         inputValue={todoInputValue}
+         setInputValue={setTodoInputValue}
+         isEditing={isEditing}
+         onCancelEdit={handleCancelEdit}
+      />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
