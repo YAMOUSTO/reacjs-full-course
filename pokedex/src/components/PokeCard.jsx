@@ -59,51 +59,44 @@ export default function PokeCard(props) {
             setLoadingSkill(false)
         }
     }
-
     useEffect(() => {
-        // LOADING STATE (if loading, exit logic)
-       // console.log("selectedPokemon:", selectedPokemon);
-
-        if (loading || !localStorage || data) { return }
-
-        // then check if the selected information is available in the cache
-            // 1. define the cache
-            let cache = {}
-            if (localStorage.getItem('pokedex')) {
-                cache = JSON.parse(localStorage.getItem('pokedex'))
-            }
-            //2. check if the selected pokemon is in the cache, otherwise fetch 
-
-            if (selectedPokemon in cache) {
-                // read from cache
-                setData(cache[selectedPokemon])
-                 console.log('Found pokemon in cache')
-                return 
-            } 
-
-            //we passed all the cache stuff to no avail and now need to fetch the data from the api
-
-            async function fetchPokemonData() {
-             setLoading(true)
-                try {
+        setData(null); // <-- Add this line
+    
+        if (loading || !localStorage) { return }
+    
+        let cache = {}
+        if (localStorage.getItem('pokedex')) {
+            cache = JSON.parse(localStorage.getItem('pokedex'))
+        }
+    
+        if (selectedPokemon in cache) {
+            setData(cache[selectedPokemon])
+            console.log('Found pokemon in cache')
+            return 
+        } 
+    
+        async function fetchPokemonData() {
+            setLoading(true)
+            try {
                 const baseUrl = 'https://pokeapi.co/api/v2/'
                 const suffix = 'pokemon/' + getPokedexNumber(selectedPokemon)
                 const finalUrl = baseUrl + suffix
                 const res = await fetch(finalUrl)
                 const pokemonData = await res.json()
                 setData(pokemonData)
-                console.log('Fetch pokemon data')
+                console.log('Fetched from API')
                 cache[selectedPokemon] = pokemonData
                 localStorage.setItem('pokedex', JSON.stringify(cache))
-             } catch (err) {
+            } catch (err) {
                 console.log(err.message)
-             } finally {
+            } finally {
                 setLoading(false)
-             }
             }
-            fetchPokemonData()
-            //3. if we fetch from the api, make sure to save the information to the cache for next time
+        }
+    
+        fetchPokemonData()
     }, [selectedPokemon])
+    
 
     if(loading || !data) {
         return (
